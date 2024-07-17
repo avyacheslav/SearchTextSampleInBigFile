@@ -1,0 +1,5 @@
+C:/Users/1/source/repos/mtfind/out/build/x64-debug/CMakeFiles/edit_cache.dir
+C:/Users/1/source/repos/mtfind/out/build/x64-debug/CMakeFiles/rebuild_cache.dir
+C:/Users/1/source/repos/mtfind/out/build/x64-debug/mtfind/CMakeFiles/mtfind.dir
+C:/Users/1/source/repos/mtfind/out/build/x64-debug/mtfind/CMakeFiles/edit_cache.dir
+C:/Users/1/source/repos/mtfind/out/build/x64-debug/mtfind/CMakeFiles/rebuild_cache.dir
