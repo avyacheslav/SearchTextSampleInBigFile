@@ -5,20 +5,19 @@
 #include <string> 
 #include <fstream>
 #include <thread>
-#include <mutex>
 #include <vector>
 #include "mtfind.h"
 
 using namespace std;
 
-#define maxThreаdNumber 10
-#define minThreadStep 1000000
+constexpr int maxThreаdNumber = 10;
+constexpr int minThreadStep = 1000000;
 
 struct FoundSampleData
 {
     int nStr;
     size_t nPosInStr;
-    char* sample;
+    shared_ptr<char[]> sample;
 };
 
 struct SearchThreadData
@@ -29,19 +28,17 @@ struct SearchThreadData
 
     size_t startPos = 0;
     size_t endPos;
-    thread* searchThread;
-    mutex* threadMutex;
+    shared_ptr<thread> searchThread = nullptr;
+
     int rowCount = 0;
 
     void Search();
 
     void SearchInLine(string str, int& lineNum);
     
-    void RunThread()
+    void CreateThread()
     {
-        thread tr(&SearchThreadData::Search, this);
-        searchThread = &tr;
-        tr.join();
+        searchThread = shared_ptr<thread>(new thread(&SearchThreadData::Search, this));
     }
     
     vector<FoundSampleData> foundSamples;
@@ -53,8 +50,6 @@ string SearchThreadData::searchSample;
 
 void SearchThreadData::Search()
 {
-    threadMutex = new mutex; 
-    threadMutex->lock();
     ifstream file(path);
     file.seekg(startPos);
     size_t pos = 0;
@@ -86,8 +81,6 @@ void SearchThreadData::Search()
     {
         rowCount--;
     }
-
-    threadMutex->unlock();
 }
 
 void SearchThreadData::SearchInLine(string str, int& lineNum)
@@ -116,8 +109,8 @@ void SearchThreadData::SearchInLine(string str, int& lineNum)
             FoundSampleData foundSampleData;
             foundSampleData.nStr = lineNum;
             foundSampleData.nPosInStr = pos;
-            foundSampleData.sample = new char[searchSample.length() + 1];
-            strcpy(foundSampleData.sample, str.substr(pos, searchSample.length()).data());
+            foundSampleData.sample = shared_ptr<char[]>(new char[searchSample.length() + 1]);
+            strcpy(foundSampleData.sample.get(), str.substr(pos, searchSample.length()).data());
             foundSampleData.sample[searchSample.length()] = '\0';
 
             foundSamples.push_back(foundSampleData);
@@ -135,7 +128,7 @@ int main(int argc, char** argv)
         return 0;
     }
     
-    SearchThreadData::path = argv[1];    
+    SearchThreadData::path = argv[1];
     SearchThreadData::searchSample = argv[2];
 
     ifstream file(SearchThreadData::path); 
@@ -164,8 +157,13 @@ int main(int argc, char** argv)
 
     for (SearchThreadData& threadData : searchThreads)
     {
-        threadData.RunThread();
+        threadData.CreateThread();
     }
+    for (SearchThreadData& threadData : searchThreads)
+    {
+        threadData.searchThread->join();
+    }
+
 
     // Output data
     
@@ -173,9 +171,7 @@ int main(int argc, char** argv)
 
     for (SearchThreadData& threadData : searchThreads)
     {
-        threadData.threadMutex->lock();
         count += threadData.foundSamples.size();
-       
     }
 
     int nstr = 0;
@@ -189,14 +185,8 @@ int main(int argc, char** argv)
             cout << nstr + threadData.foundSamples[i].nStr << " " << threadData.foundSamples[i].nPosInStr << " " << threadData.foundSamples[i].sample << endl;
         }
 
-        threadData.threadMutex->unlock();
-
         nstr += threadData.rowCount;
     }
 
-    for (SearchThreadData& threadData : searchThreads)
-    {
-        delete threadData.threadMutex;
-    }
 	return 0;
 }
